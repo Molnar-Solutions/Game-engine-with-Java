@@ -6,8 +6,13 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
+import org.newdawn.slick.opengl.Texture;
+import org.newdawn.slick.opengl.TextureLoader;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,66 +20,85 @@ import java.util.List;
 // @ by storing positional data about a model in a VAO
 public class Loader
 {
-    private List<Integer> vaos = new ArrayList<>();
-    private List<Integer> vbos = new ArrayList<>();
+    private final List<Integer> vaos = new ArrayList<>();
+    private final List<Integer> vbos = new ArrayList<>();
+    private final List<Integer> textures = new ArrayList<>();
 
-    public RawModel loadToVao(float[] positions)
+    public RawModel loadToVao(float[] positions, float[] textureCoords, int[] indices)
     {
         int vaoID = createVAO();
-        storeDataInAttributeList(0, positions);
+        bindIndicesVBO(indices);
+        storeDataInAttributeList(0, 3, positions);
+        storeDataInAttributeList(1, 2, textureCoords);
         unbindVAO();
-        return new RawModel(vaoID, (positions.length / 3));
+        return new RawModel(vaoID, indices.length);
+    }
+
+    public int loadTexture(String fileName)
+    {
+        Texture texture = null;
+        try {
+            texture = TextureLoader.getTexture("PNG", new FileInputStream("src/main/resources/textures/" + fileName));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        int textureID = texture.getTextureID();
+        textures.add(textureID);
+        return textureID;
     }
 
     private int createVAO()
     {
         int vaoID = GL30.glGenVertexArrays();
         vaos.add(vaoID);
-        /*
-        *
-        * @ If you want to do something with a vao then you have to bind it.
-        *
-        * */
         GL30.glBindVertexArray(vaoID);
         return vaoID;
     }
 
-    private void storeDataInAttributeList(int attributeNumber, float[] data)
+    private void storeDataInAttributeList(int attributeNumber, int dimension, float[] data)
     {
-        // Create an empty vbo
         int vboID = GL15.glGenBuffers();
         vbos.add(vboID);
-        /*
-        *
-        *
-        * @ It is same than the vao
-        * */
         GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboID);
         FloatBuffer buffer = storeDataInFloatBuffer(data);
-        // What do we use for data ? Will it change or it will change ?
         GL15.glBufferData(GL15.GL_ARRAY_BUFFER, buffer, GL15.GL_STATIC_DRAW);
-        GL20.glVertexAttribPointer(attributeNumber, 3, GL11.GL_FLOAT, false, 0, 0);
+        GL20.glVertexAttribPointer(attributeNumber, dimension, GL11.GL_FLOAT, false, 0, 0);
         GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
     }
 
     private void unbindVAO()
     {
-        /*
-         *
-         * @ VAO stay bounded until we 'disable' it.
-         * @ Unbind the currently active vao.
-         *
-         * */
         GL30.glBindVertexArray(0);
+    }
+
+    private void bindIndicesVBO(int[] indices)
+    {
+        int vboId = GL15.glGenBuffers();
+        vbos.add(vboId);
+        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, vboId);
+        IntBuffer data = storaDataInIntBuffer(indices);
+        GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, data, GL15.GL_STATIC_DRAW);
+    }
+
+    private IntBuffer storaDataInIntBuffer(int[] data)
+    {
+        IntBuffer intBuffer = BufferUtils.createIntBuffer(data.length);
+        intBuffer.put(data);
+        intBuffer.flip();
+        return intBuffer;
     }
 
     public void cleanUp()
     {
-        vaos.forEach(vao -> {
-            GL30.glDeleteVertexArrays(vao);
+        vaos.forEach(id -> {
+            GL30.glDeleteVertexArrays(id);
         });
-        vbos.forEach(vbo -> {
-            GL30.glDeleteVertexArrays(vbo);
+        vbos.forEach(id -> {
+            GL30.glDeleteVertexArrays(id);
+        });
+        textures.forEach(id -> {
+            GL11.glDeleteTextures(id);
         });
     }
 

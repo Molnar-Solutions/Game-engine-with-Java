@@ -14,12 +14,7 @@ public class DisplayManager {
         attribs.withProfileCore(true);
 
         try {
-            Display.setDisplayMode(
-                    new DisplayMode(
-                            WIDTH,
-                            HEIGHT
-                    )
-            );
+            Display.setDisplayMode(new DisplayMode(WIDTH, HEIGHT));
             Display.create(new PixelFormat(), attribs);
             Display.setTitle("Game Engine");
         } catch (LWJGLException e) {
